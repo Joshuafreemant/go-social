@@ -52,3 +52,5 @@
 [15:23:54] 404 - POST /api/auth/logn -        16.5ms
 [15:24:00] 404 - POST /api/auth/logn -       344.6µs
 [15:24:09] 200 - POST /api/auth/login -    1.6965312s
+[15:31:12] 400 - POST /api/auth/forgot-password -    2.3153756s
+[15:31:25] 200 - POST /api/auth/forgot-password -    4.2181588s
