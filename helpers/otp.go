@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Joshuafreemant/go-social/model"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -35,7 +34,7 @@ func SaveOTP(email, otp string, db *mongo.Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	expiresAt := time.Now().Add(10 * time.Minute) // OTP valid for 10 minutes
+	expiresAt := time.Now().Add(10 * time.Minute)
 	otpData := model.OTPData{
 		Email:     email,
 		OTP:       otp,

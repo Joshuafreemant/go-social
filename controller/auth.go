@@ -10,17 +10,13 @@ import (
 	"github.com/Joshuafreemant/go-social/model"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CreateUsers(c *fiber.Ctx) error {
+func CreateUsers(c *fiber.Ctx, db *mongo.Database) error {
 	users := new(model.Users)
 	var ctx = context.Background()
-	db, err := database.Connect()
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
 
 	users.CreatedAt = time.Now()
 	users.UpdatedAt = time.Now()
@@ -31,6 +27,17 @@ func CreateUsers(c *fiber.Ctx) error {
 
 	if users.Password == "" {
 		return helpers.ResponseMsg(c, 400, "Password is required", nil)
+	}
+
+	// Check if the email is already taken
+	var existingUser model.Users
+
+	err := db.Collection("users").FindOne(ctx, bson.M{"email": users.Email}).Decode(&existingUser)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return helpers.ResponseMsg(c, 500, "Error checking email", err.Error())
+	}
+	if existingUser.Email != "" {
+		return helpers.ResponseMsg(c, 400, "Email already taken", nil)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(users.Password), bcrypt.DefaultCost)
@@ -47,29 +54,21 @@ func CreateUsers(c *fiber.Ctx) error {
 	}
 }
 
-func Login(c *fiber.Ctx) error {
-	var ctx = context.Background()
-	db, err := database.Connect()
-
-	type LoginRequest struct {
+func Login(c *fiber.Ctx, db *mongo.Database) error {
+	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
-	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return helpers.ResponseMsg(c, fiber.StatusBadRequest, "Invalid request", err.Error())
 	}
 
-	if err != nil {
-		return helpers.ResponseMsg(c, fiber.StatusInternalServerError, "Database connection error", err.Error())
-	}
-
 	var user model.Users
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = db.Collection("users").FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
+	err := db.Collection("users").FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
 		return helpers.ResponseMsg(c, fiber.StatusUnauthorized, "Invalid email or password", nil)
 	}
@@ -82,7 +81,7 @@ func Login(c *fiber.Ctx) error {
 	if err != nil {
 		return helpers.ResponseMsg(c, fiber.StatusInternalServerError, "Failed to generate token", err.Error())
 	}
-	// Set token in cookie
+
 	c.Cookie(&fiber.Cookie{
 		Name:     "jwt",
 		Value:    token,

@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Joshuafreemant/go-social/database"
 	"github.com/Joshuafreemant/go-social/helpers"
 	"github.com/Joshuafreemant/go-social/router"
 	"github.com/gofiber/fiber/v2"
@@ -26,7 +27,12 @@ func main() {
 	defer file.Close()
 
 	app := fiber.New()
+	db, err := database.Connect()
 
+	if err != nil {
+		log.Fatal(err)
+	}
+	app.Static("/images", "./images")
 	app.Use(logger.New(logger.Config{
 		Format: "[${time}] ${status} - ${method} ${path} - ${latency}\n",
 		Output: file, // Write logs to the file
@@ -38,7 +44,7 @@ func main() {
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
-	router.RoutesSetup(app)
+	router.RoutesSetup(app, db)
 	// MONGO_URL := os.Getenv("MONGO_URL")
 
 	PORT := os.Getenv("PORT")
