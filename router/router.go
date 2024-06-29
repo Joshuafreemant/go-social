@@ -31,5 +31,11 @@ func RoutesSetup(app *fiber.App, db *mongo.Database) {
 	posts.Post("/add-post", func(c *fiber.Ctx) error {
 		return controller.CreatePost(c, db)
 	})
+	posts.Get("/", func(c *fiber.Ctx) error {
+		return controller.GetAllPosts(c, db)
+	})
+	posts.Delete("/delete/:id", func(c *fiber.Ctx) error {
+		return controller.DeletePost(c, db)
+	})
 
 }

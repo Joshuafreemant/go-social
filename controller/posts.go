@@ -11,6 +11,8 @@ import (
 	"github.com/Joshuafreemant/go-social/helpers"
 	"github.com/Joshuafreemant/go-social/model"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -55,7 +57,47 @@ func CreatePost(c *fiber.Ctx, db *mongo.Database) error {
 		return helpers.ResponseMsg(c, 500, "Failed to create post", err.Error())
 	}
 
-	log.Printf("Inserted post with ID: %v", result.InsertedID)
-
 	return helpers.ResponseMsg(c, 200, "Post created", result.InsertedID)
+}
+
+func DeletePost(c *fiber.Ctx, db *mongo.Database) error {
+	postID := c.Params("id")
+
+	objectID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		return helpers.ResponseMsg(c, 400, "Invalid post ID", err.Error())
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	var ctx = context.Background()
+
+	result, err := db.Collection("posts").DeleteOne(ctx, filter)
+	if err != nil {
+		return helpers.ResponseMsg(c, 500, "Failed to delete post", err.Error())
+	}
+
+	if result.DeletedCount == 0 {
+		return helpers.ResponseMsg(c, 404, "Post not found", nil)
+	}
+
+	return helpers.ResponseMsg(c, 200, "Post deleted", postID)
+}
+
+func GetAllPosts(c *fiber.Ctx, db *mongo.Database) error {
+	var ctx = context.Background()
+
+	var posts []model.Post
+
+	result, err := db.Collection("posts").Find(ctx, bson.M{})
+	if err != nil {
+		return helpers.ResponseMsg(c, 500, "Failed to retrieve posts", err.Error())
+	}
+	defer result.Close(ctx)
+
+	if err = result.All(ctx, &posts); err != nil {
+		return helpers.ResponseMsg(c, 500, "Failed to decode posts", err.Error())
+	}
+
+	return helpers.ResponseMsg(c, 200, "Posts retrieved successfully", posts)
 }
